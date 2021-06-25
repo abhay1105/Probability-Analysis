@@ -1,0 +1,168 @@
+---
+title: "Probability Analysis"
+author: "Abhay Paidipalli"
+date: "6/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 9, fig.height = 5)
+
+library(tidyverse)
+library(ggthemes)
+
+```
+
+## Weight Example
+
+```{r, include=TRUE, echo=FALSE}
+# contains all of our functions in order to run a simulation for the weight example
+
+# gets sample from a uniformly distributed population
+uniform_sample <- function(numPeople, lowerBound, upperBound) {
+  result <- sample(lowerBound:upperBound, numPeople, replace=T)
+}
+
+# gets sample from a normally distributed population
+normal_sample <- function(numPeople, mean, std) {
+  result <- rnorm(numPeople, mean, std)
+}
+
+# gets sample from a geometrically distributed population
+geometric_sample <- function(numPeople, prob) {
+  result <- rgeom(numPeople, prob)
+}
+
+# creates resolution based on parameters
+create_res <- function(numRes, lowerBound, upperBound) {
+  extra_res <- numRes - 2
+  if (extra_res > 0) {
+    result <- c(lowerBound, upperBound)
+    gap <- (upperBound - lowerBound) / (extra_res + 1)
+    tempNum <- lowerBound
+    for (i in 1:extra_res) {
+      tempNum <- tempNum + gap
+      signif(tempNum, digits=2)
+      result <- append(result, tempNum)
+    }
+  } else {
+    result <- c(lowerBound, upperBound)
+  }
+  return(result)
+}
+
+# applies the resolution to a sample
+apply_res <- function(nums, res) {
+  result <- c()
+  for (num in nums) {
+    shortest_distance <- max(nums) - min(nums)
+    closest_res <- 0
+    for (r in res) {
+      if (abs(num - r) < shortest_distance) {
+        shortest_distance <- abs(num - r)
+        closest_res <- r
+      }
+    }
+    result <- append(result, closest_res)
+  }
+  return(result)
+}
+
+# will do one comparison 
+conduct_trial <- function(numGroups, numPeoplePerGroup, lowerBound, upperBound, numRes, sampleType) {
+  avg <- c()
+  for (i in 1:numGroups) {
+    if (sampleType == "normal") {
+      # using the rule that 3 standard deviations away from the mean equals 99.7% of the area
+      sample <- normal_sample(numPeoplePerGroup, mean(c(lowerBound, upperBound)), (upperBound - lowerBound) / 3)
+    } else if (sampleType == "uniform") {
+      sample <- uniform_sample(numPeoplePerGroup, lowerBound, upperBound)
+    } else if (sampleType == "geometric") {
+      # using the rule that mean of geometric distribution is reciprocal of probability (will estimate this around a quarter of the way from lower to upper bounds)
+      sample <- geometric_sample(numPeoplePerGroup, 1 / (mean(c(lowerBound, mean(c(lowerBound, upperBound))))))
+    }
+    resolution <- create_res(numRes, lowerBound, upperBound)
+    sample_with_resolution <- apply_res(sample, resolution)
+    avg <- append(avg, mean(sample_with_resolution))
+  }
+  return(min(avg) == max(avg))
+}
+
+# will do the entire simulation for a certain number of trials
+conduct_sim <- function(numTrials, numGroupsPerTrial, numPeoplePerGroup, lowerBound, upperBound, numRes, sampleType) {
+  result <- c()
+  for (i in 1:numTrials) {
+    result <- append(result, conduct_trial(numGroupsPerTrial, numPeoplePerGroup, lowerBound, upperBound, numRes, sampleType))
+  }
+  return(result)
+}
+
+# calculates ultimate probability that resulted for conditions of the simulation
+calc_prob <- function(bools) {
+  tru_bool_count <- 0
+  fal_bool_count <- 0
+  for (bool in bools) {
+    if (bool == TRUE) {
+      tru_bool_count <- tru_bool_count + 1
+    } else {
+      fal_bool_count <- fal_bool_count + 1
+    }
+  }
+  return(tru_bool_count/length(bools))
+}
+
+# makes tibble using results of the prob function
+create_prob_dist <- function(numTrials, numGroupsPerTrial, numPeoplePerGroup, lowerBound, upperBound, lowerRes, upperRes, concentration, sampleType) {
+  prob_data <- tibble(numRes = numeric(), prob = numeric())
+  numRes <- c()
+  prob <- c()
+  for (i in lowerRes:upperRes) {
+    for (x in 1:concentration) {
+      numRes <- append(numRes, i)
+      prob <- append(prob, calc_prob(conduct_sim(numTrials, numGroupsPerTrial, numPeoplePerGroup, lowerBound, upperBound, i, sampleType)))
+    }
+  }
+  prob_data %>% 
+    add_row(numRes, prob)
+}
+
+# creates the graph for the probability distribution
+create_prob_graph <- function(numTrials, numGroupsPerTrial, numPeoplePerGroup, lowerBound, upperBound, lowerRes, upperRes, concentration, sampleType) {
+  data <- create_prob_dist(numTrials, numGroupsPerTrial, numPeoplePerGroup, lowerBound, upperBound, lowerRes, upperRes, concentration, sampleType) %>% 
+    ggplot(mapping = aes(numRes, prob)) + 
+    geom_jitter(width = 0.5, alpha = 0.3) +
+    geom_smooth(method = "loess", formula = y ~ x) +
+    theme_bw() +
+    labs(title = "Probability of tie based on resolution",
+         x = "\nResolution",
+         y = "Probability\n")
+}
+
+# example call: 1000 trials, 2 groups per trial, each group has 100 subjects, uniform distribution is of range 50-250, the resolution range we are observing is between 2-100, we will be using 50 points at each resolution value in order to get a more concentrated graph
+# create_prob_graph(1000, 2, 100, 50, 250, 2, 100, 50, "uniform")
+
+```
+
+## Uniform Distribution
+
+```{r, include=TRUE, echo=FALSE}
+
+plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "uniform"))
+
+```
+
+## Normal Distribution
+
+```{r, include=TRUE, echo=FALSE}
+
+plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "normal"))
+
+```
+
+## Geometric Distribution
+
+```{r, include=TRUE, echo=FALSE}
+
+plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "geometric"))
+
+```
