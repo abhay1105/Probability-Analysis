@@ -138,6 +138,28 @@ create_prob_graph <- function(numTrials, numGroupsPerTrial, numPeoplePerGroup, l
          y = "Probability\n")
 }
 
+# creates the graph for the change in the number of subjects
+create_subject_num_graph <- function(numTrials, numGroupsPerTrial, lowerSubNum, upperSubNum, lowerBound, upperBound, numRes, concentration, sampleType) {
+  subject_num_data <- tibble(subjectNum = numeric(), prob = numeric())
+  subjectNum <- c()
+  prob <- c()
+  for (i in lowerSubNum:upperSubNum) {
+    for (x in 1:concentration) {
+      subjectNum <- append(subjectNum, i)
+      prob <- append(prob, calc_prob(conduct_sim(numTrials, numGroupsPerTrial, i, lowerBound, upperBound, numRes, sampleType)))
+    }
+  }
+  subject_num_data %>% 
+    add_row(subjectNum, prob) %>% 
+    ggplot(mapping = aes(subjectNum, prob)) + 
+    geom_jitter(width = 0.5, alpha = 0.3) + 
+    geom_smooth() + 
+    theme_bw() + 
+    labs(title = "Probability of tie based on number of subjects",
+         x = "\nNumber of Subjects in a Group",
+         y = "Probability\n")
+}
+
 # example call: 1000 trials, 2 groups per trial, each group has 100 subjects, uniform distribution is of range 50-250, the resolution range we are observing is between 2-100, we will be using 50 points at each resolution value in order to get a more concentrated graph
 # create_prob_graph(1000, 2, 100, 50, 250, 2, 100, 50, "uniform")
 
@@ -147,7 +169,7 @@ create_prob_graph <- function(numTrials, numGroupsPerTrial, numPeoplePerGroup, l
 
 ```{r, include=TRUE, echo=FALSE}
 
-plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "uniform"))
+# plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "uniform"))
 
 ```
 
@@ -155,7 +177,7 @@ plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "uniform"))
 
 ```{r, include=TRUE, echo=FALSE}
 
-plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "normal"))
+# plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "normal"))
 
 ```
 
@@ -163,6 +185,16 @@ plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "normal"))
 
 ```{r, include=TRUE, echo=FALSE}
 
-plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "geometric"))
+# plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "geometric"))
 
 ```
+
+## Number of Subjects in a Group
+
+```{r, include=TRUE, echo=FALSE}
+
+plot(create_subject_num_graph(300, 2, 50, 150, 50, 250, 5, 3, "uniform"))
+
+```
+
+
