@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE, fig.width = 9, fig.height = 5)
 
 library(tidyverse)
 library(ggthemes)
+library(plotly)
 
 ```
 
@@ -111,7 +112,7 @@ calc_prob <- function(bools) {
   return(tru_bool_count/length(bools))
 }
 
-# makes tibble using results of the prob function
+# makes tibble using results of the prob function (resolution vs. probability)
 create_prob_dist <- function(numTrials, numGroupsPerTrial, numPeoplePerGroup, lowerBound, upperBound, lowerRes, upperRes, concentration, sampleType) {
   prob_data <- tibble(numRes = numeric(), prob = numeric())
   numRes <- c()
@@ -126,7 +127,7 @@ create_prob_dist <- function(numTrials, numGroupsPerTrial, numPeoplePerGroup, lo
     add_row(numRes, prob)
 }
 
-# creates the graph for the probability distribution
+# creates the graph: resolution vs. probability
 create_prob_graph <- function(numTrials, numGroupsPerTrial, numPeoplePerGroup, lowerBound, upperBound, lowerRes, upperRes, concentration, sampleType) {
   data <- create_prob_dist(numTrials, numGroupsPerTrial, numPeoplePerGroup, lowerBound, upperBound, lowerRes, upperRes, concentration, sampleType) %>% 
     ggplot(mapping = aes(numRes, prob)) + 
@@ -138,7 +139,7 @@ create_prob_graph <- function(numTrials, numGroupsPerTrial, numPeoplePerGroup, l
          y = "Probability\n")
 }
 
-# creates the graph for the change in the number of subjects
+# creates the graph: number of subjects per group vs. probability
 create_subject_num_graph <- function(numTrials, numGroupsPerTrial, lowerSubNum, upperSubNum, lowerBound, upperBound, numRes, concentration, sampleType) {
   subject_num_data <- tibble(subjectNum = numeric(), prob = numeric())
   subjectNum <- c()
@@ -149,7 +150,7 @@ create_subject_num_graph <- function(numTrials, numGroupsPerTrial, lowerSubNum, 
       prob <- append(prob, calc_prob(conduct_sim(numTrials, numGroupsPerTrial, i, lowerBound, upperBound, numRes, sampleType)))
     }
   }
-  subject_num_data %>% 
+  subject_num_data <- subject_num_data %>% 
     add_row(subjectNum, prob) %>% 
     ggplot(mapping = aes(subjectNum, prob)) + 
     geom_jitter(width = 0.5, alpha = 0.3) + 
@@ -158,6 +159,41 @@ create_subject_num_graph <- function(numTrials, numGroupsPerTrial, lowerSubNum, 
     labs(title = "Probability of tie based on number of subjects",
          x = "\nNumber of Subjects in a Group",
          y = "Probability\n")
+  return(subject_num_data)
+}
+
+# creates the 3D-graph: resolution vs. number of subjects per group vs. probability
+create_prob_graph_3d <- function(numTrials, numGroupsPerTrial, lowerSubNum, upperSubNum, lowerNumRes, upperNumRes, lowerBound, upperBound, sampleType) {
+  three_dim_data <- tibble(numRes = numeric(), subjectNum = numeric(), prob = numeric())
+  numRes <- c()
+  subjectNum <- c()
+  prob <- c()
+  for (i in lowerNumRes:upperNumRes) {
+    for (j in lowerSubNum:upperSubNum) {
+      numRes <- append(numRes, i)
+      subjectNum <- append(subjectNum, j)
+      prob <- append(prob, calc_prob(conduct_sim(numTrials, numGroupsPerTrial, j, lowerBound, upperBound, i, sampleType)))
+    }
+  }
+  three_dim_data <- three_dim_data %>% 
+    add_row(numRes, subjectNum, prob)
+  
+  m <- lm(prob ~ numRes + subjectNum, data = three_dim_data)
+  
+  numRes <- unique(three_dim_data$numRes)
+  subjectNum <- unique(three_dim_data$subjectNum)
+  grid <- with(three_dim_data, expand.grid(numRes, subjectNum))
+  d <- setNames(data.frame(grid), c("numRes", "subjectNum"))
+  vals <- predict(m, newdata = d)
+  
+  m <- matrix(vals, nrow = length(unique(d$numRes)), ncol = length(unique(d$subjectNum)))
+  
+  three_dim_data <- three_dim_data %>% 
+    plot_ly(x = ~numRes, y = ~subjectNum, z = ~prob) %>% 
+    add_markers() %>% 
+    add_surface(x = ~numRes, y = ~subjectNum, z = ~m) %>% 
+    layout(scene = list(xaxis = list(title = "Resolution"), yaxis = list(title = "Number of Subjects"), zaxis = list(title = "Probability")))
+  return(three_dim_data)
 }
 
 # example call: 1000 trials, 2 groups per trial, each group has 100 subjects, uniform distribution is of range 50-250, the resolution range we are observing is between 2-100, we will be using 50 points at each resolution value in order to get a more concentrated graph
@@ -165,7 +201,7 @@ create_subject_num_graph <- function(numTrials, numGroupsPerTrial, lowerSubNum, 
 
 ```
 
-## Uniform Distribution
+## Uniform Distribution (Resolution vs. Probability)
 
 ```{r, include=TRUE, echo=FALSE}
 
@@ -173,7 +209,7 @@ create_subject_num_graph <- function(numTrials, numGroupsPerTrial, lowerSubNum, 
 
 ```
 
-## Normal Distribution
+## Normal Distribution (Resolution vs. Probability)
 
 ```{r, include=TRUE, echo=FALSE}
 
@@ -181,7 +217,7 @@ create_subject_num_graph <- function(numTrials, numGroupsPerTrial, lowerSubNum, 
 
 ```
 
-## Geometric Distribution
+## Geometric Distribution (Resolution vs. Probability)
 
 ```{r, include=TRUE, echo=FALSE}
 
@@ -189,11 +225,19 @@ create_subject_num_graph <- function(numTrials, numGroupsPerTrial, lowerSubNum, 
 
 ```
 
-## Number of Subjects in a Group
+## Number of Subjects in a Group (Number of Subjects Per Group vs. Probability)
 
 ```{r, include=TRUE, echo=FALSE}
 
-plot(create_subject_num_graph(300, 2, 50, 150, 50, 250, 5, 3, "uniform"))
+# plot(create_subject_num_graph(300, 2, 50, 150, 50, 250, 5, 3, "uniform"))
+
+```
+
+## Resolution vs. Number of Subjects Per Group vs. Probability
+
+```{r, include=TRUE, echo=FALSE}
+
+create_prob_graph_3d(100, 2, 20, 50, 5, 20, 50, 250, "uniform")
 
 ```
 
