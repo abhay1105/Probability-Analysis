@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE, fig.width = 9, fig.height = 5)
 library(tidyverse)
 library(ggthemes)
 library(plotly)
+library(matrixStats)
 
 ```
 
@@ -201,7 +202,50 @@ create_prob_graph_3d <- function(numTrials, numGroupsPerTrial, lowerSubNum, uppe
 
 ```
 
-## Uniform Distribution (Resolution vs. Probability)
+## Coin Flip Example
+
+```{r, include=TRUE, echo=FALSE}
+
+coin_flip_graph <- function(numTrials, lowerFlipNum, upperFlipNum) {
+  first_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
+  second_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
+  for (i in lowerFlipNum:upperFlipNum) {
+    first_matrix[,i - lowerFlipNum + 1] = rbinom(numTrials, i, 0.5)
+    second_matrix[,i - lowerFlipNum + 1] = rbinom(numTrials, i, 0.5)
+  }
+  combined_matrix <- first_matrix == second_matrix
+  prob_tibble <- tibble(numFlips = numeric(), prob = numeric())
+  numFlips <- c()
+  prob <- c()
+  counts <- colCounts(combined_matrix, value = TRUE)
+  firstCount <- lowerFlipNum
+  for (count in counts) {
+    numFlips <- append(numFlips, firstCount)
+    prob <- append(prob, count / numTrials)
+    firstCount <- firstCount + 1
+  }
+  prob_graph <- prob_tibble %>% 
+    add_row(numFlips, prob) %>% 
+    ggplot(mapping = aes(numFlips, prob)) + 
+    geom_point() + 
+    geom_smooth(method = "loess", formula = y ~ x) +
+    theme_bw() + 
+    labs(title = "Probability of Two Groups Getting the Same Number of Heads for a Certain Number of Flips",
+         x = "\nNumber of Flips",
+         y = "Probability of Tie\n")
+  return(prob_graph)
+}
+
+plot(coin_flip_graph(30000, 2, 100))
+
+```
+
+
+
+
+
+
+<!-- ## Uniform Distribution (Resolution vs. Probability) -->
 
 ```{r, include=TRUE, echo=FALSE}
 
@@ -209,7 +253,7 @@ create_prob_graph_3d <- function(numTrials, numGroupsPerTrial, lowerSubNum, uppe
 
 ```
 
-## Normal Distribution (Resolution vs. Probability)
+<!-- ## Normal Distribution (Resolution vs. Probability) -->
 
 ```{r, include=TRUE, echo=FALSE}
 
@@ -217,7 +261,7 @@ create_prob_graph_3d <- function(numTrials, numGroupsPerTrial, lowerSubNum, uppe
 
 ```
 
-## Geometric Distribution (Resolution vs. Probability)
+<!-- ## Geometric Distribution (Resolution vs. Probability) -->
 
 ```{r, include=TRUE, echo=FALSE}
 
@@ -225,7 +269,7 @@ create_prob_graph_3d <- function(numTrials, numGroupsPerTrial, lowerSubNum, uppe
 
 ```
 
-## Number of Subjects in a Group (Number of Subjects Per Group vs. Probability)
+<!-- ## Number of Subjects in a Group (Number of Subjects Per Group vs. Probability) -->
 
 ```{r, include=TRUE, echo=FALSE}
 
@@ -233,12 +277,15 @@ create_prob_graph_3d <- function(numTrials, numGroupsPerTrial, lowerSubNum, uppe
 
 ```
 
-## Resolution vs. Number of Subjects Per Group vs. Probability
+<!-- ## Resolution vs. Number of Subjects Per Group vs. Probability -->
 
 ```{r, include=TRUE, echo=FALSE}
 
-create_prob_graph_3d(100, 2, 20, 50, 5, 20, 50, 250, "uniform")
+# create_prob_graph_3d(100, 2, 20, 50, 5, 20, 50, 250, "uniform")
 
 ```
+
+
+
 
 
