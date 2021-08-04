@@ -12,6 +12,7 @@ library(tidyverse)
 library(ggthemes)
 library(plotly)
 library(matrixStats)
+library(S4Vectors)
 
 ```
 
@@ -228,7 +229,6 @@ coin_flip_graph <- function(numTrials, lowerFlipNum, upperFlipNum) {
     add_row(numFlips, prob) %>% 
     ggplot(mapping = aes(numFlips, prob)) + 
     geom_point() + 
-    geom_smooth(method = "loess", formula = y ~ x) +
     theme_bw() + 
     labs(title = "Probability of Two Groups Getting the Same Number of Heads for a Certain Number of Flips",
          x = "\nNumber of Flips",
@@ -236,48 +236,165 @@ coin_flip_graph <- function(numTrials, lowerFlipNum, upperFlipNum) {
   return(prob_graph)
 }
 
-plot(coin_flip_graph(30000, 2, 100))
+coin_flip_graph_vec <- function(numTrials, flipNums) {
+  first_matrix <- matrix(nrow = numTrials, ncol = length(flipNums), dimnames = list(c(1:numTrials), flipNums))
+  second_matrix <- matrix(nrow = numTrials, ncol = length(flipNums), dimnames = list(c(1:numTrials), flipNums))
+  temp <- 1
+  for (i in flipNums) {
+    first_matrix[,temp] = rbinom(numTrials, i, 0.5)
+    second_matrix[,temp] = rbinom(numTrials, i, 0.5)
+    temp <- temp + 1
+  }
+  combined_matrix <- first_matrix == second_matrix
+  prob_tibble <- tibble(numFlips = numeric(), prob = numeric())
+  numFlips <- c()
+  prob <- c()
+  counts <- colCounts(combined_matrix, value = TRUE)
+  firstCount <- 1
+  for (count in counts) {
+    numFlips <- append(numFlips, flipNums[firstCount])
+    prob <- append(prob, count / numTrials)
+    firstCount <- firstCount + 1
+  }
+  prob_graph <- prob_tibble %>% 
+    add_row(numFlips, prob) %>% 
+    ggplot(mapping = aes(numFlips, prob)) + 
+    geom_point() + 
+    theme_bw() + 
+    labs(title = "Probability of Two Groups Getting the Same Number of Heads for a Certain Number of Flips",
+         x = "\nNumber of Flips",
+         y = "Probability of Tie\n")
+  return(prob_graph)
+}
 
+multi_face_coin_flip_graph <- function(numOutcomesVec, numTrials, lowerFlipNum, upperFlipNum) {
+  prob_tibble <- tibble(numFlips = numeric(), prob = numeric(), numCoinFaces = numeric())
+  numFlips <- c()
+  prob <- c()
+  numCoinFaces <- c()
+  for (numOutcomes in numOutcomesVec) {
+    first_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
+    second_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
+    for (i in lowerFlipNum:upperFlipNum) {
+      first_avg_list <- c()
+      second_avg_list <- c()
+      for (z in 1:numTrials) {
+        first_avg_list <- append(first_avg_list, signif(sum(sample(c(1:numOutcomes), i, replace=TRUE)) / i, digits=3))
+        second_avg_list <- append(second_avg_list, signif(sum(sample(c(1:numOutcomes), i, replace=TRUE)) / i, digits=3))
+      }
+      first_matrix[,i - lowerFlipNum + 1] <- first_avg_list
+      second_matrix[,i - lowerFlipNum + 1] <- second_avg_list
+    }
+    combined_matrix <- first_matrix == second_matrix
+    counts <- colCounts(combined_matrix, value = TRUE)
+    firstCount <- lowerFlipNum
+    for (count in counts) {
+      numFlips <- append(numFlips, firstCount)
+      prob <- append(prob, count / numTrials)
+      numCoinFaces <- append(numCoinFaces, numOutcomes)
+      firstCount <- firstCount + 1
+    }
+  }
+  prob_graph <- prob_tibble %>%
+    add_row(numFlips, prob, numCoinFaces) %>%
+    ggplot(mapping = aes(numFlips, prob, color=numCoinFaces)) +
+    geom_point() +
+    # geom_smooth(method = "loess", formula = y ~ x) +
+    theme_bw() +
+    labs(title = "Probability of Two Groups Getting the Same Average Outcome for a Certain Number of Flips",
+         x = "\nNumber of Flips",
+         y = "Probability of Tie\n")
+  return(prob_graph)
+}
+
+binom_pdf <- function(numTrials, numSuccesses, successProb) {
+  calcCombination <- factorial(numTrials) / (factorial(numSuccesses) * factorial(numTrials - numSuccesses))
+  calcProbSuccess <- successProb ^ numSuccesses
+  calcProbFailure <- (1 - successProb) ^ (numTrials - numSuccesses)
+  return(calcCombination * calcProbSuccess * calcProbFailure)
+}
+
+binom_plot <- function(numTrials) {
+  plot <- ggplot(data.frame(x = c(1:numTrials)), aes = (x = x)) + 
+    stat_function(fun = binom_pdf(numTrials, x, 0.5))
+  return(plot)
+}
+
+multi_face_prob <- function(numFaces, numTrials, numRolls) {
+  firstGroup <- matrix(sample(1:numFaces, size = numTrials * numRolls, replace = TRUE), nrow = numTrials, ncol = numRolls)
+  firstGroupMeans <- apply(firstGroup, 1, mean)
+  secondGroup <- matrix(sample(1:numFaces, size = numTrials * numRolls, replace = TRUE), nrow = numTrials, ncol = numRolls)
+  secondGroupMeans <- apply(secondGroup, 1, mean)
+  comparisonMeans <- firstGroupMeans == secondGroupMeans
+  return(mean(comparisonMeans))
+}
+
+multi_face_graph <- function(facesVector, numTrials, lowerFlipNum, upperFlipNum) {
+  probTibble <- tibble(numFaces = numeric(), numRolls = numeric(), prob = numeric())
+  numFaces <- c()
+  numRolls <- c()
+  prob <- c()
+  for (a in facesVector) {
+    for (i in lowerFlipNum:upperFlipNum) {
+      numFaces <- append(numFaces, a)
+      numRolls <- append(numRolls, i)
+      prob <- append(prob, multi_face_prob(a, numTrials, i))
+    }
+  }
+  print(probTibble)
+  graph <- probTibble %>% 
+    add_row(numFaces, numRolls, prob) %>% 
+    ggplot(mapping = aes(numRolls, prob, color = numFaces)) + 
+    geom_point() + 
+    theme_bw() + 
+    labs(title = "Probability of Two Groups Getting the Same Average Based on the Number of Outcomes",
+         x = "\nNumber of Rolls",
+         y = "Probability of Tie\n")
+  return(graph)
+}
+
+# plot(coin_flip_graph(80000, 2, 100))
+multi_face_graph(c(2, 3, 5, 10), 10000, 1, 100)
+coin_flip_graph(8000, 1, 100)
+coin_flip_graph_vec(8000, c(1000, 10000, 100000, 1000000))
+# multi_face_coin_flip_graph(c(2), 10000, 1, 100)
+# coin_flip_graph(8000, 2, 100)
+# coin_flip_graph2(8000, c(2:100, 1000, 10000))
 ```
 
-
-
-
-
-
-<!-- ## Uniform Distribution (Resolution vs. Probability) -->
+## Uniform Distribution (Resolution vs. Probability)
 
 ```{r, include=TRUE, echo=FALSE}
 
-# plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "uniform"))
+# plot(create_prob_graph(600, 2, 40, 50, 250, 2, 30, 1, "uniform"))
 
 ```
 
-<!-- ## Normal Distribution (Resolution vs. Probability) -->
+## Normal Distribution (Resolution vs. Probability)
 
 ```{r, include=TRUE, echo=FALSE}
 
-# plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "normal"))
+# plot(create_prob_graph(600, 2, 40, 50, 250, 2, 30, 1, "normal"))
 
 ```
 
-<!-- ## Geometric Distribution (Resolution vs. Probability) -->
+## Geometric Distribution (Resolution vs. Probability)
 
 ```{r, include=TRUE, echo=FALSE}
 
-# plot(create_prob_graph(300, 2, 40, 50, 250, 2, 30, 10, "geometric"))
+# plot(create_prob_graph(600, 2, 40, 50, 250, 2, 30, 1, "geometric"))
 
 ```
 
-<!-- ## Number of Subjects in a Group (Number of Subjects Per Group vs. Probability) -->
+## Number of Subjects in a Group (Number of Subjects Per Group vs. Probability)
 
 ```{r, include=TRUE, echo=FALSE}
 
-# plot(create_subject_num_graph(300, 2, 50, 150, 50, 250, 5, 3, "uniform"))
+# plot(create_subject_num_graph(600, 2, 20, 60, 50, 250, 5, 1, "uniform"))
 
 ```
 
-<!-- ## Resolution vs. Number of Subjects Per Group vs. Probability -->
+## Resolution vs. Number of Subjects Per Group vs. Probability
 
 ```{r, include=TRUE, echo=FALSE}
 
