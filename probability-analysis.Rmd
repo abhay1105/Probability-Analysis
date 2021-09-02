@@ -13,6 +13,7 @@ library(ggthemes)
 library(plotly)
 library(matrixStats)
 library(S4Vectors)
+library(memoise)
 
 ```
 
@@ -203,164 +204,277 @@ create_prob_graph_3d <- function(numTrials, numGroupsPerTrial, lowerSubNum, uppe
 
 ```
 
+
 ## Coin Flip Example
 
-```{r, include=TRUE, echo=FALSE}
+```{r, include=TRUE, echo=FALSE, cache=TRUE}
 
-coin_flip_graph <- function(numTrials, lowerFlipNum, upperFlipNum) {
-  first_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
-  second_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
-  for (i in lowerFlipNum:upperFlipNum) {
-    first_matrix[,i - lowerFlipNum + 1] = rbinom(numTrials, i, 0.5)
-    second_matrix[,i - lowerFlipNum + 1] = rbinom(numTrials, i, 0.5)
-  }
-  combined_matrix <- first_matrix == second_matrix
-  prob_tibble <- tibble(numFlips = numeric(), prob = numeric())
-  numFlips <- c()
-  prob <- c()
-  counts <- colCounts(combined_matrix, value = TRUE)
-  firstCount <- lowerFlipNum
-  for (count in counts) {
-    numFlips <- append(numFlips, firstCount)
-    prob <- append(prob, count / numTrials)
-    firstCount <- firstCount + 1
-  }
-  prob_graph <- prob_tibble %>% 
-    add_row(numFlips, prob) %>% 
-    ggplot(mapping = aes(numFlips, prob)) + 
-    geom_point() + 
-    theme_bw() + 
-    labs(title = "Probability of Two Groups Getting the Same Number of Heads for a Certain Number of Flips",
-         x = "\nNumber of Flips",
-         y = "Probability of Tie\n")
-  return(prob_graph)
+commented_code <- function() {
+  
+  # coin_flip_graph <- function(numTrials, lowerFlipNum, upperFlipNum) {
+#   first_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
+#   second_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
+#   for (i in lowerFlipNum:upperFlipNum) {
+#     first_matrix[,i - lowerFlipNum + 1] = rbinom(numTrials, i, 0.5)
+#     second_matrix[,i - lowerFlipNum + 1] = rbinom(numTrials, i, 0.5)
+#   }
+#   combined_matrix <- first_matrix == second_matrix
+#   prob_tibble <- tibble(numFlips = numeric(), prob = numeric())
+#   numFlips <- c()
+#   prob <- c()
+#   counts <- colCounts(combined_matrix, value = TRUE)
+#   firstCount <- lowerFlipNum
+#   for (count in counts) {
+#     numFlips <- append(numFlips, firstCount)
+#     prob <- append(prob, count / numTrials)
+#     firstCount <- firstCount + 1
+#   }
+#   prob_graph <- prob_tibble %>% 
+#     add_row(numFlips, prob) %>% 
+#     ggplot(mapping = aes(numFlips, prob)) + 
+#     geom_point() + 
+#     theme_bw() + 
+#     labs(title = "Probability of Two Groups Getting the Same Number of Heads for a Certain Number of Flips",
+#          x = "\nNumber of Flips",
+#          y = "Probability of Tie\n")
+#   return(prob_graph)
+# }
+# 
+# # this one has a rbinom() so it probably is incorrect for that reason
+# multi_face_coin_flip_graph_vec <- function(numOutcomesVec, numTrials, flipNums) {
+#   prob_tibble <- tibble(numCoinFaces = factor(), numCoinFlips = numeric(), probOfTie = numeric())
+#   numCoinFaces <- c()
+#   numCoinFlips <- c()
+#   probOfTie <- c()
+#   for (a in numOutcomesVec) {
+#     first_matrix <- matrix(nrow = numTrials, ncol = length(flipNums), dimnames = list(c(1:numTrials), flipNums))
+#     second_matrix <- matrix(nrow = numTrials, ncol = length(flipNums), dimnames = list(c(1:numTrials), flipNums))
+#     temp <- 1
+#     for (i in flipNums) {
+#       first_matrix[,temp] = rbinom(numTrials, i, 0.5)
+#       second_matrix[,temp] = rbinom(numTrials, i, 0.5)
+#       temp <- temp + 1
+#     }
+#     combined_matrix <- first_matrix == second_matrix
+#     counts <- colCounts(combined_matrix, value = TRUE)
+#     firstCount <- 1
+#     for (count in counts) {
+#       numCoinFaces <- append(numCoinFaces, as.factor(a))
+#       numCoinFlips <- append(numCoinFlips, flipNums[firstCount])
+#       probOfTie <- append(probOfTie, count / numTrials)
+#       
+#       firstCount <- firstCount + 1
+#     }
+#   }
+#   
+#   prob_graph <- prob_tibble %>% 
+#     add_row(numCoinFaces, numCoinFlips, probOfTie) %>% 
+#     ggplot(mapping = aes(numCoinFlips, probOfTie, color = numCoinFaces)) + 
+#     geom_point() + 
+#     scale_x_log10() +
+#     theme_bw() + 
+#     labs(title = "Probability of Two Groups Getting the Same Number of Heads for a Certain Number of Flips",
+#          x = "\nNumber of Flips",
+#          y = "Probability of Tie\n")
+#   return(prob_graph)
+# }
+# 
+# multi_face_coin_flip_graph <- function(numOutcomesVec, numTrials, lowerFlipNum, upperFlipNum) {
+#   prob_tibble <- tibble(numFlips = numeric(), prob = numeric(), numCoinFaces = factor())
+#   numFlips <- c()
+#   prob <- c()
+#   numCoinFaces <- c()
+#   for (numOutcomes in numOutcomesVec) {
+#     first_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
+#     second_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
+#     for (i in lowerFlipNum:upperFlipNum) {
+#       first_avg_list <- c()
+#       second_avg_list <- c()
+#       for (z in 1:numTrials) {
+#         first_avg_list <- append(first_avg_list, signif(sum(sample(c(1:numOutcomes), i, replace=TRUE)) / i, digits=3))
+#         second_avg_list <- append(second_avg_list, signif(sum(sample(c(1:numOutcomes), i, replace=TRUE)) / i, digits=3))
+#       }
+#       first_matrix[,i - lowerFlipNum + 1] <- first_avg_list
+#       second_matrix[,i - lowerFlipNum + 1] <- second_avg_list
+#     }
+#     combined_matrix <- first_matrix == second_matrix
+#     counts <- colCounts(combined_matrix, value = TRUE)
+#     firstCount <- lowerFlipNum
+#     for (count in counts) {
+#       numFlips <- append(numFlips, firstCount)
+#       prob <- append(prob, count / numTrials)
+#       numCoinFaces <- append(numCoinFaces, as.factor(numOutcomes))
+#       firstCount <- firstCount + 1
+#     }
+#   }
+#   prob_graph <- prob_tibble %>%
+#     add_row(numFlips, prob, numCoinFaces) %>%
+#     ggplot(mapping = aes(numFlips, prob, color=numCoinFaces)) +
+#     geom_point() +
+#     # geom_smooth(method = "loess", formula = y ~ x) +
+#     theme_bw() +
+#     labs(title = "Probability of Two Groups Getting the Same Average Outcome for a Certain Number of Flips",
+#          x = "\nNumber of Flips",
+#          y = "Probability of Tie\n")
+#   return(prob_graph)
+# }
+# 
+# binom_pdf <- function(numTrials, numSuccesses, successProb) {
+#   calcCombination <- factorial(numTrials) / (factorial(numSuccesses) * factorial(numTrials - numSuccesses))
+#   calcProbSuccess <- successProb ^ numSuccesses
+#   calcProbFailure <- (1 - successProb) ^ (numTrials - numSuccesses)
+#   return(calcCombination * calcProbSuccess * calcProbFailure)
+# }
+# 
+# binom_plot <- function(numTrials) {
+#   plot <- ggplot(data.frame(x = c(1:numTrials)), aes = (x = x)) + 
+#     stat_function(fun = binom_pdf(numTrials, x, 0.5))
+#   return(plot)
+# }
+  
 }
 
-coin_flip_graph_vec <- function(numTrials, flipNums) {
-  first_matrix <- matrix(nrow = numTrials, ncol = length(flipNums), dimnames = list(c(1:numTrials), flipNums))
-  second_matrix <- matrix(nrow = numTrials, ncol = length(flipNums), dimnames = list(c(1:numTrials), flipNums))
-  temp <- 1
-  for (i in flipNums) {
-    first_matrix[,temp] = rbinom(numTrials, i, 0.5)
-    second_matrix[,temp] = rbinom(numTrials, i, 0.5)
-    temp <- temp + 1
-  }
-  combined_matrix <- first_matrix == second_matrix
-  prob_tibble <- tibble(numFlips = numeric(), prob = numeric())
-  numFlips <- c()
-  prob <- c()
-  counts <- colCounts(combined_matrix, value = TRUE)
-  firstCount <- 1
-  for (count in counts) {
-    numFlips <- append(numFlips, flipNums[firstCount])
-    prob <- append(prob, count / numTrials)
-    firstCount <- firstCount + 1
-  }
-  prob_graph <- prob_tibble %>% 
-    add_row(numFlips, prob) %>% 
-    ggplot(mapping = aes(numFlips, prob)) + 
-    geom_point() + 
-    theme_bw() + 
-    labs(title = "Probability of Two Groups Getting the Same Number of Heads for a Certain Number of Flips",
-         x = "\nNumber of Flips",
-         y = "Probability of Tie\n")
-  return(prob_graph)
-}
-
-multi_face_coin_flip_graph <- function(numOutcomesVec, numTrials, lowerFlipNum, upperFlipNum) {
-  prob_tibble <- tibble(numFlips = numeric(), prob = numeric(), numCoinFaces = numeric())
-  numFlips <- c()
-  prob <- c()
+multi_face_coin_flip <- function(facesVector, numTrials, lowerFlipNum, upperFlipNum) {
+  probTibble <- tibble(numCoinFaces = factor(), numCoinFlips = numeric(), probOfTie = numeric())
   numCoinFaces <- c()
-  for (numOutcomes in numOutcomesVec) {
-    first_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
-    second_matrix <- matrix(nrow = numTrials, ncol = upperFlipNum - lowerFlipNum + 1, dimnames = list(c(1:numTrials), c(lowerFlipNum:upperFlipNum)))
+  numCoinFlips <- c()
+  probOfTie <- c()
+  for (a in facesVector) {
     for (i in lowerFlipNum:upperFlipNum) {
-      first_avg_list <- c()
-      second_avg_list <- c()
-      for (z in 1:numTrials) {
-        first_avg_list <- append(first_avg_list, signif(sum(sample(c(1:numOutcomes), i, replace=TRUE)) / i, digits=3))
-        second_avg_list <- append(second_avg_list, signif(sum(sample(c(1:numOutcomes), i, replace=TRUE)) / i, digits=3))
-      }
-      first_matrix[,i - lowerFlipNum + 1] <- first_avg_list
-      second_matrix[,i - lowerFlipNum + 1] <- second_avg_list
-    }
-    combined_matrix <- first_matrix == second_matrix
-    counts <- colCounts(combined_matrix, value = TRUE)
-    firstCount <- lowerFlipNum
-    for (count in counts) {
-      numFlips <- append(numFlips, firstCount)
-      prob <- append(prob, count / numTrials)
-      numCoinFaces <- append(numCoinFaces, numOutcomes)
-      firstCount <- firstCount + 1
+      numCoinFaces <- append(numCoinFaces, as.factor(a))
+      numCoinFlips <- append(numCoinFlips, i)
+      probOfTie <- append(probOfTie, multi_face_prob(a, numTrials, i))
     }
   }
-  prob_graph <- prob_tibble %>%
-    add_row(numFlips, prob, numCoinFaces) %>%
-    ggplot(mapping = aes(numFlips, prob, color=numCoinFaces)) +
+  graph <- probTibble %>%
+    add_row(numCoinFaces, numCoinFlips, probOfTie) %>%
+    ggplot(mapping = aes(numCoinFlips, probOfTie, color = numCoinFaces)) +
     geom_point() +
-    # geom_smooth(method = "loess", formula = y ~ x) +
     theme_bw() +
-    labs(title = "Probability of Two Groups Getting the Same Average Outcome for a Certain Number of Flips",
+    labs(title = "Probability of Two Groups Getting the Same Average Based on the Number of Outcomes",
          x = "\nNumber of Flips",
          y = "Probability of Tie\n")
-  return(prob_graph)
+  return(graph)
 }
 
-binom_pdf <- function(numTrials, numSuccesses, successProb) {
-  calcCombination <- factorial(numTrials) / (factorial(numSuccesses) * factorial(numTrials - numSuccesses))
-  calcProbSuccess <- successProb ^ numSuccesses
-  calcProbFailure <- (1 - successProb) ^ (numTrials - numSuccesses)
-  return(calcCombination * calcProbSuccess * calcProbFailure)
+multi_face_coin_flip_vec <- function(facesVector, numTrials, flipNums) {
+  probTibble <- tibble(numCoinFaces = factor(), numCoinFlips = numeric(), probOfTie = numeric())
+  numCoinFaces <- c()
+  numCoinFlips <- c()
+  probOfTie <- c()
+  for (a in facesVector) {
+    for (flipNum in flipNums) {
+      numCoinFaces <- append(numCoinFaces, as.factor(a))
+      numCoinFlips <- append(numCoinFlips, flipNum)
+      probOfTie <- append(probOfTie, multi_face_prob(a, numTrials, flipNum))
+    }
+  }
+  graph <- probTibble %>%
+    add_row(numCoinFaces, numCoinFlips, probOfTie) %>%
+    ggplot(mapping = aes(numCoinFlips, probOfTie, color = numCoinFaces)) +
+    geom_point() +
+    theme_bw() +
+    labs(title = "Probability of Two Groups Getting the Same Average Based on the Number of Outcomes",
+         x = "\nNumber of Flips",
+         y = "Probability of Tie\n")
+  return(graph)
 }
 
-binom_plot <- function(numTrials) {
-  plot <- ggplot(data.frame(x = c(1:numTrials)), aes = (x = x)) + 
-    stat_function(fun = binom_pdf(numTrials, x, 0.5))
-  return(plot)
-}
-
-multi_face_prob <- function(numFaces, numTrials, numRolls) {
-  firstGroup <- matrix(sample(1:numFaces, size = numTrials * numRolls, replace = TRUE), nrow = numTrials, ncol = numRolls)
+multi_face_prob <- function(numFaces, numTrials, numFlips) {
+  firstGroup <- matrix(sample(1:numFaces, size = numTrials * numFlips, replace = TRUE), nrow = numTrials, ncol = numFlips)
   firstGroupMeans <- apply(firstGroup, 1, mean)
-  secondGroup <- matrix(sample(1:numFaces, size = numTrials * numRolls, replace = TRUE), nrow = numTrials, ncol = numRolls)
+  secondGroup <- matrix(sample(1:numFaces, size = numTrials * numFlips, replace = TRUE), nrow = numTrials, ncol = numFlips)
   secondGroupMeans <- apply(secondGroup, 1, mean)
   comparisonMeans <- firstGroupMeans == secondGroupMeans
   return(mean(comparisonMeans))
 }
 
-multi_face_graph <- function(facesVector, numTrials, lowerFlipNum, upperFlipNum) {
-  probTibble <- tibble(numFaces = numeric(), numRolls = numeric(), prob = numeric())
-  numFaces <- c()
-  numRolls <- c()
-  prob <- c()
-  for (a in facesVector) {
-    for (i in lowerFlipNum:upperFlipNum) {
-      numFaces <- append(numFaces, a)
-      numRolls <- append(numRolls, i)
-      prob <- append(prob, multi_face_prob(a, numTrials, i))
+create_coin_flip_csv <- function(numTrials, facesVector, flipsVector, csvName) {
+  coin_flip_tibble <- tibble(faces = numeric(), flips = numeric(), probOfTie = numeric())
+  faces <- c()
+  flips <- c()
+  probOfTie <- c()
+  for (numFaces in facesVector) {
+    for (numFlips in flipsVector) {
+      flips <- append(flips, numFlips)
+      probOfTie <- append(probOfTie, multi_face_prob(numFaces, numTrials, numFlips))
+      faces <- append(faces, numFaces)
     }
   }
-  print(probTibble)
-  graph <- probTibble %>% 
-    add_row(numFaces, numRolls, prob) %>% 
-    ggplot(mapping = aes(numRolls, prob, color = numFaces)) + 
-    geom_point() + 
-    theme_bw() + 
-    labs(title = "Probability of Two Groups Getting the Same Average Based on the Number of Outcomes",
-         x = "\nNumber of Rolls",
-         y = "Probability of Tie\n")
-  return(graph)
+  coin_flip_tibble <- coin_flip_tibble %>% 
+    add_row(faces, flips, probOfTie)
+  write_csv(coin_flip_tibble, csvName)
 }
 
+analyze_trends <- function(csvName) {
+  rawTibble <- read_csv(csvName)
+  modifiedTibble <- rawTibble %>% 
+    mutate(faces = as.factor(faces))
+  modifiedTibble %>%
+    ggplot(mapping = aes(log(flips), log(probOfTie), color = faces)) +
+    geom_point() +
+    facet_grid(~faces) + 
+    theme_bw() + 
+    labs(title = "Analzing Trends in Coin Flip Scenario",
+         x = "\nNumber of Flips (Log)",
+         y = "Probability of Tie (Log)\n")
+  # lm(data = rawTibble, subset = faces == 15, log(probOfTie) ~ log(flips))
+}
+
+analyze_trends("coin_flip_data2.csv")
+
 # plot(coin_flip_graph(80000, 2, 100))
-multi_face_graph(c(2, 3, 5, 10), 10000, 1, 100)
-coin_flip_graph(8000, 1, 100)
-coin_flip_graph_vec(8000, c(1000, 10000, 100000, 1000000))
+
+# xfun::cache_rds({
+#   
+#   # write your time-consuming code in this expression
+  # multi_face_coin_flip(c(2, 3, 5, 10), 10000, 1, 100)
+# 
+# })
+# 
+# xfun::cache_rds({
+#   
+#   # write your time-consuming code in this expression
+  # multi_face_coin_flip_vec(c(2, 3, 5, 10), 10000, c(seq(100, 1000, 100)))
+# 
+# })
+
+# multi_face_coin_flip_graph_vec(c(2, 3, 5, 10), 900000, c(seq(100, 1000, 100)))
+# multi_face_coin_flip_graph_vec(c(2, 3, 5, 10), 900000, c(1000, 10000, 100000, 1000000))
+
+# create_coin_flip_csv(10000, c(2, 3, 5, 10), c(1:100, 1000, 10000, 100000, 1000000), "coin_flip_data2.csv")
+# create_coin_flip_csv(10000, c(2, 3, 5, 7, 10, 15), c(1:100), "coin_flip_data2.csv")
+# USE THE MULTI FACE PROB FUNCTION ---- MAKES IT MUCH MUCH QUICKER ---- ADD IT TO THE MULTI FACE VEC FUNCTION
+# THIS COULD BE COMPLETELY WRONG UNFORTUNATELY
+# FOR NOW MAKE DO WITH LOW FLIP NUMBERS, BUT MORE VARIETY OF FACES
+# USE LARGE FLIP NUMS FOR GRAPH ONLY MAYBE??
+
 # multi_face_coin_flip_graph(c(2), 10000, 1, 100)
 # coin_flip_graph(8000, 2, 100)
 # coin_flip_graph2(8000, c(2:100, 1000, 10000))
 ```
+
+
+```{r, include=TRUE, echo=FALSE, cache=TRUE}
+
+multi_face_coin_flip(c(2, 3, 5, 10), 10000, 1, 100)
+
+```
+
+
+```{r, include=TRUE, echo=FALSE, cache=TRUE}
+
+multi_face_coin_flip_vec(c(2, 3, 5, 10), 10000, c(seq(100, 1000, 100)))
+
+```
+
+
+```{r, include=TRUE, echo=FALSE, cache=TRUE}
+
+# multi_face_coin_flip_vec(c(2, 3, 5, 10), 10000, c(1000, 10000, 100000, 1000000))
+
+```
+
 
 ## Uniform Distribution (Resolution vs. Probability)
 
