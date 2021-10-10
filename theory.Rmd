@@ -1,0 +1,39 @@
+---
+title: "The Theory Behind Coin Flips"
+author: "Abhay Paidipalli"
+date: "10/5/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{=latex}
+
+\begin{tabular}{ll}
+A & B \\
+A & B \\
+\end{tabular}
+
+```
+
+So far, we have observed that the number of flips of a multi-faced coin and the probability of two groups having a tie after a certain number of flips consists of a log-log relationship. Therefore, if $y$ was considered the probability of a tie between two groups and $x$ the number of flips, the relationship would look something like this: $$y=ax^b$$
+
+Where $a$ and $b$ are both constants (possibly having some sort of relationship with the number of faces on the coin). If we apply some of the rules of logarithms to this formula, we could turn the equation into something along the lines of the following: $$log(y) = log(a) + b*log(x)$$
+
+From our experimentation, utilizing a linear model, it was evident that the value of $b$ hovered constantly around -0.5. So, the formula would look something like this: $$log(y) = log(a) - 0.5*log(x)$$
+
+In contrast, the value obtained via our linear model for $a$ changed as the number of faces on the coin changed, leading towards the presumption that $a$ may be a function of the number of faces. As a result, if we consider $N$ as the number of faces on the coin, that interpretation can now be substituted into the formula: $$log(y) = log(f(N)) - 0.5*log(x)$$
+
+Further experimentation determined that $a$, in fact, was a function of $N$: $$a=f(N)=\frac{1}{N}$$
+
+Therefore, the final derived formula would look like this: $$log(y) = log(\frac{1}{N}) - 0.5*log(x)$$
+
+If we apply some more rules of logarithms, we are left with this: $$y = \frac{1}{N\sqrt{x}}$$
+
+The same formula can be reached via a theoretical approach. Using $x$ as our number of flips, $a$ as the number of flips one specific face is achieved, $N$ as the number of faces on the multi-faced coin, and $y$ as the probability of two groups having a tie after a certain number of flips, this scenario can utilize probability concepts in order to give us the following formula: $$y=\sum_{a=0}^{x} {}_x C_a * {(\frac{1}{N})}^a*{(\frac{N-1}{N})}^{x-a}$$
+
+
+
+

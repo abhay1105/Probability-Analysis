@@ -253,6 +253,12 @@ faces,flips,probOfTie
 1 / (3 * 10^0.5) = 0.105
 
 
+x = number of flips
+N = number of faces
+a = number of one specific (success)
+
+x sum a = 0    x C a    (1 / N) ^ a   ((N - 1) / N) ^ (x - a)
+
 
 ```{r, include=TRUE, echo=FALSE, cache=TRUE}
 
