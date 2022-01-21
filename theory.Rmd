@@ -7,6 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(ggraph)
+library(igraph)
+library(tidyverse)
+
 ```
 
 ```{=latex}
@@ -32,7 +37,95 @@ Therefore, the final derived formula would look like this: $$log(y) = log(\frac{
 
 If we apply some more rules of logarithms, we are left with this: $$y = \frac{1}{N\sqrt{x}}$$
 
-The same formula can be reached via a theoretical approach. Using $x$ as our number of flips, $a$ as the number of flips one specific face is achieved, $N$ as the number of faces on the multi-faced coin, and $y$ as the probability of two groups having a tie after a certain number of flips, this scenario can utilize probability concepts in order to give us the following formula: $$y=\sum_{a=0}^{x} {}_x C_a * {(\frac{1}{N})}^a*{(\frac{N-1}{N})}^{x-a}$$
+<!-- The same formula can be reached via a theoretical approach. Using $x$ as our number of flips, $a$ as the number of flips one specific face is achieved, $N$ as the number of faces on the multi-faced coin, and $y$ as the probability of two groups having a tie after a certain number of flips, this scenario can utilize probability concepts in order to first derive the equation for the probability of getting a set number of one face in a certain number of flips: $$P(a) = {}_x C_a * {(\frac{1}{N})}^a*{(\frac{N-1}{N})}^{x-a}$$ -->
+
+Using some discrete math concepts, we can derive a formula that matches the one obtained from our experimental approach. Let's consider $P(N, a)$ as the function that determines the probability of two people getting a tie, which takes into account two parameters, $N$ being the number of faces on the multi-faced coin and $a$ being the number of times we flip the coin. In addition to this, $i$ will represent the sum of the faces of one possible outcome of flips (the number value of the face will be retrieved from the range: 1 to $N$) and $S$ will represent the number of possible ways that sum is achieved. Using these variables, we can construct the following formula: $$P(N, a) = \sum_{i=N}^{N * a} \frac{S}{N^a}$$
+
+To define $S$, we can treat each possible sum as its own case. For example, if we are looking at the case where we are using 2 faces and 2 flips, the minimum possible sum is 2 and the maximum possible sum is 4. Furthermore, we know that each flip in this case has to be greater than or equal to 1 and less than or equal to 2. It is also possible for multiple flips in the same group to have the same face as one another. Therefore, we would need to utilize combinations with repetition in order to determine the number of ways to achieve one possible sum.
+
+To make this more understandable, let's consider each flip a "bin" and let's also consider the total sum as a group of "objects." Essentially, our goal is to determine how many different ways we can divide that group of objects into the specific number of bins. First, we would need to consider the number of ways to divide the group of objects with the condition that each bin needs to have at least one object (since the face number of any singular flip can be no less than 1). Then, from this group of possibilities, we need to apply the condition that each bin can have no more than $N$ number of objects, which in our example scenario would be 2. After applying both conditions, we can determine the value of S.
+
+The process to solve for S, however, is slightly involved. First, we need to understand the concept of using a combination with repetition. Following through with the analogy from the previous paragraph, we can represent this with the following: $${objects + bins - 1 \choose bins - 1}$$ 
+
+However, in order to obtain the number of possibilities that arise when dealing with a minimum number of one object in each bin, our calculation will be modified to this: $${i - 1 \choose a - 1}$$
+
+Like mentioned prior, $a$ will represent the number of flips in this scenario (also referred to as the number of bins according to our analogy), and $i$ will represent the sum of the faces retrieved from one possible outcome of flips (by subtracting the number of bins, we are accounting for the fact that each bin needs to have at least one object, therefore cancelling out $a$ in the first part of the combination). We can refer to the result of this calculation by a new variable, $A$.
+
+Now, we will exclude all of the cases that have one or more bins exceeding the maximum number of objects (as mentioned before, the maximum would be $N$, otherwise known as the number of faces on the multi-faced coin). Let's first set up the scenario we are working with. 
+
+The equation that we have initially looks something like this: $$x_1 + x_2 + x_3 + ... + x_a = i - a$$, where $x_n \leq N$ for $1 \leq n \leq a$.
+
+By representing each flip (or bin) with an $x$ term, we are demonstrating the fact that the sum of all of our flips is equal to $i - a$, or simply the sum of one possible outcome of flips (the subtraction of $a$ shows the step we already completed in the previous part of the process, where each flip needs to result in a minimum value of 1). The inequalities mentioned after the equation portray the upper limit we are dealing with since the value for each flip cannot exceed the number of faces ($N$).
+
+In order to actually solve for the size of the set of solutions for this problem, we can create a group of conditions for $x_n$ that will make it easier to exclude unwanted cases: $$c_n = x_n \geq N + 1$$, where $1 \leq n \leq a$.
+
+By doing this, all we need to do is solve for the number of outcomes that negate the group of conditions that we just set and we can obtain the value for $S$: $$S = N(\bar{c_1}\bar{c_2}\bar{c_3}...\bar{c_a}) = A - (N(c_1) + N(c_2) + N(c_3) + ... N(c_a)) + (N(c_1 c_2) + N(c_1 c_3) + N(c_1 c_4) + ... + N(c_z c_a)) - (N(c_1 c_2 c_3) + N(c_1 c_2 c_4) + N(c_1 c_2 c_5) + ... + N(c_z c_y c_a)) + ... - N(c_1 c_2 c_3 ... c_a)$$, where $1 \leq z \leq y \leq ... \leq a$.
+
+<!-- P(S) = probability of the average of the faces (S) -->
+
+<!-- Example 1) 2 faces, 2 flips (face labels are 1 and 2) -->
+<!-- 1 1           P(2 / 2) = 1/4          1     2C0 -->
+<!-- 1 2   2 1     P(3 / 2) = 2/4 = 1/2    2     2C1 -->
+<!-- 2 2           P(4 / 2) = 1/4          1     2C2 -->
+
+<!-- Probability from formula: $\frac{1}{2\sqrt{2}}$ -->
+
+<!-- Example 2) 2 faces, 4 flips (face labels are 1 and 2) -->
+<!-- P(4 / 4) = 1/16            1      4C0 -->
+<!-- P(5 / 4) = 4/16 = 1/4      4      4C1 -->
+<!-- P(6 / 4) = 6/16 = 3/8      6      4C2 -->
+<!-- P(7 / 4) = 4/16 = 1/4      4      4C3 -->
+<!-- P(8 / 4) = 1/16            1      4C4 -->
+
+<!-- Probability from formula: $\frac{1}{2\sqrt{4}}$ -->
+
+<!-- Example 3) 4 faces, 2 flips (face labels are 1-4) -->
+<!-- 1 1   2 1   3 1   4 1     P(2 / 2) = 1/16              1 -->
+<!-- 1 2   2 2   3 2   4 2     P(3 / 2) = 2/16 = 1/8        2 -->
+<!-- 1 3   2 3   3 3   4 3     P(4 / 2) = 3/16              3 -->
+<!-- 1 4   2 4   3 4   4 4     P(5 / 2) = 4/16 = 1/4        4 -->
+<!--                           P(6 / 2) = 3/16              3 -->
+<!--                           P(7 / 2) = 2/16 = 1/8        2 -->
+<!--                           P(8 / 2) = 1/16              1 -->
+
+<!-- Probability from formula: $\frac{1}{4\sqrt{2}}$ -->
+
+<!-- Example 4) 3 faces, 3 flips (face labels are 1-3) -->
+<!-- 1 1 1   2 1 1   3 1 1     P(3 / 3) = 1/27             1 -->
+<!-- 1 1 2   2 1 2   3 1 2     P(4 / 3) = 3/27 = 1/9       3 -->
+<!-- 1 1 3   2 1 3   3 1 3     P(5 / 3) = 6/27 = 2/9       6 -->
+<!-- 1 2 1   2 2 1   3 2 1     P(6 / 3) = 7/27             7 -->
+<!-- 1 2 2   2 2 2   3 2 2     P(7 / 3) = 6/27 = 2/9       6 -->
+<!-- 1 2 3   2 2 3   3 2 3     P(8 / 3) = 3/27 = 1/9       3 -->
+<!-- 1 3 1   2 3 1   3 3 1     P(9 / 3) = 1/27             1 -->
+<!-- 1 3 2   2 3 2   3 3 2 -->
+<!-- 1 3 3   2 3 3   3 3 3    -->
+
+<!-- write down formula of probability of tie -->
+<!-- simplify our derived formula -->
+
+<!-- different number of dice rolls? -->
+
+
+```{r, include=FALSE, echo=FALSE}
+
+# create an edge list data frame giving the hierarchical structure of your individuals
+d1 <- data.frame(from="origin", to=paste("group", seq(1,5), sep=""))
+d2 <- data.frame(from=rep(d1$to, each=5), to=paste("subgroup", seq(1,25), sep="_"))
+edges <- rbind(d1, d2)
+ 
+# Create a graph object 
+mygraph <- graph_from_data_frame( edges )
+ 
+# Basic tree
+ggraph(mygraph, layout = 'dendrogram', circular = FALSE) + 
+  geom_edge_diagonal() +
+  geom_node_point() +
+  theme_void()
+
+```
+
+
 
 
 
