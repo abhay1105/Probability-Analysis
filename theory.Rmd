@@ -39,7 +39,7 @@ If we apply some more rules of logarithms, we are left with this: $$y = \frac{1}
 
 <!-- The same formula can be reached via a theoretical approach. Using $x$ as our number of flips, $a$ as the number of flips one specific face is achieved, $N$ as the number of faces on the multi-faced coin, and $y$ as the probability of two groups having a tie after a certain number of flips, this scenario can utilize probability concepts in order to first derive the equation for the probability of getting a set number of one face in a certain number of flips: $$P(a) = {}_x C_a * {(\frac{1}{N})}^a*{(\frac{N-1}{N})}^{x-a}$$ -->
 
-Using some discrete math concepts, we can derive a formula that matches the one obtained from our experimental approach. Let's consider $P(N, a)$ as the function that determines the probability of two people getting a tie, which takes into account two parameters, $N$ being the number of faces on the multi-faced coin and $a$ being the number of times we flip the coin. In addition to this, $i$ will represent the sum of the faces of one possible outcome of flips (the number value of the face will be retrieved from the range: 1 to $N$) and $S$ will represent the number of possible ways that sum is achieved. Using these variables, we can construct the following formula: $$P(N, a) = \sum_{i=N}^{N * a} \frac{S}{N^a}$$
+Using some discrete math concepts, we can derive a formula that matches the one obtained from our experimental approach. Let's consider $P(N, a)$ as the function that determines the probability of two people getting a tie, which takes into account two parameters, $N$ being the number of faces on the multi-faced coin and $a$ being the number of times we flip the coin. In addition to this, $i$ will represent the sum of the faces of one possible outcome of flips (the number value of the face will be retrieved from the range: 1 to $N$) and $S$ will represent the number of possible ways that sum is achieved. Using these variables, we can construct the following formula: $$P(N, a) = \sum_{i=N}^{N * a} (\frac{S}{N^a})^2$$
 
 To define $S$, we can treat each possible sum as its own case. For example, if we are looking at the case where we are using 2 faces and 2 flips, the minimum possible sum is 2 and the maximum possible sum is 4. Furthermore, we know that each flip in this case has to be greater than or equal to 1 and less than or equal to 2. It is also possible for multiple flips in the same group to have the same face as one another. Therefore, we would need to utilize combinations with repetition in order to determine the number of ways to achieve one possible sum.
 
@@ -60,6 +60,408 @@ By representing each flip (or bin) with an $x$ term, we are demonstrating the fa
 In order to actually solve for the size of the set of solutions for this problem, we can create a group of conditions for $x_n$ that will make it easier to exclude unwanted cases: $$c_n = x_n \geq N + 1$$, where $1 \leq n \leq a$.
 
 By doing this, all we need to do is solve for the number of outcomes that negate the group of conditions that we just set and we can obtain the value for $S$: $$S = N(\bar{c_1}\bar{c_2}\bar{c_3}...\bar{c_a}) = A - (N(c_1) + N(c_2) + N(c_3) + ... N(c_a)) + (N(c_1 c_2) + N(c_1 c_3) + N(c_1 c_4) + ... + N(c_z c_a)) - (N(c_1 c_2 c_3) + N(c_1 c_2 c_4) + N(c_1 c_2 c_5) + ... + N(c_z c_y c_a)) + ... - N(c_1 c_2 c_3 ... c_a)$$, where $1 \leq z \leq y \leq ... \leq a$.
+
+<br>
+
+<br>
+
+Some worked-out examples:
+
+______________________________________________________________________________________________
+______________________________________________________________________________________________
+______________________________________________________________________________________________
+
+**Example 1) 2 faces, 2 flips**
+
+$$P(2, 2) = \sum_{i=2}^{4} (\frac{S}{4})^2$$
+
+**********************************************************************************************
+
+**Scenario 1 (solving for S when i = 2)**
+
+<br>
+
+**Step 1: Each flip yields a 1 at the minimum**
+
+$$x_1 + x_2 = 2$$
+
+$x_1^* + x_2^* = 0$, since $x_i \geq 1$
+
+<br>
+
+Now, using combinations with repetition:
+
+${objects + bins - 1 \choose bins - 1} = {0 + 2 - 1 \choose 2 - 1} = 1$ (our "A" value from above)
+
+<br>
+
+**Step 2: Each flip cannot be higher than 2**
+
+$x_1^* + x_2^* = 0$ and $x_i^* \leq 2$. Therefore, our condition is $c_i = x_i^* \geq 3$, so $\bar{c_i} = x_i^* \leq 2$
+
+$$S_2 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2)$$
+
+<br>
+
+*Solving for $N(c_1)$*
+
+$x_1 + x_2 = 0$ with $x_1 \geq 3$. Therefore, $x_1^* + x_2 = -3$
+
+Using combinations with repetition again (this is the part I'm slightly doubtful of since it introduces combinations with negative numbers inside of them):
+
+$$N(c_1) = {objects + bins - 1 \choose bins - 1} = {-3 + 2 - 1 \choose 2 - 1} = 0$$
+
+Since $c_2$ is the same as $c_1$, $N(c_1) = N(c_2)$
+
+<br>
+
+*Solving for $N(c_1 c_2)$*
+
+$x_1 + x_2 = 0$ with $x_1 \geq 3$ and $x_2 \geq 3$. Therefore, $x_1^* + x_2^* = -6$
+
+$$N(c_1 c_2) = {objects + bins - 1 \choose bins - 1} = {-6 + 2 - 1 \choose 2 - 1} = 0$$
+
+<br>
+
+*Finally, plug in all of our obtained values:*
+
+$$S_2 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2) = 1 - (0 + 0) + 0 = 1$$
+
+**********************************************************************************************
+
+**Scenario 2 (solving for S when i = 3)**
+
+<br>
+
+**Step 1: Each flip yields a 1 at the minimum**
+
+$$x_1 + x_2 = 3$$
+
+$x_1^* + x_2^* = 1$, since $x_i \geq 1$
+
+<br>
+
+Now, using combinations with repetition:
+
+${objects + bins - 1 \choose bins - 1} = {1 + 2 - 1 \choose 2 - 1} = 2$ (our "A" value from above)
+
+<br>
+
+**Step 2: Each flip cannot be higher than 2**
+
+$x_1^* + x_2^* = 1$ and $x_i^* \leq 2$. Therefore, our condition is $c_i = x_i^* \geq 3$, so $\bar{c_i} = x_i^* \leq 2$
+
+$$S_3 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2)$$
+
+<br>
+
+*Solving for $N(c_1)$*
+
+$x_1 + x_2 = 1$ with $x_1 \geq 3$. Therefore, $x_1^* + x_2 = -2$
+
+$$N(c_1) = {objects + bins - 1 \choose bins - 1} = {-2 + 2 - 1 \choose 2 - 1} = 0$$
+
+Since $c_2$ is the same as $c_1$, $N(c_1) = N(c_2)$
+
+<br>
+
+*Solving for $N(c_1 c_2)$*
+
+$x_1 + x_2 = 1$ with $x_1 \geq 3$ and $x_2 \geq 3$. Therefore, $x_1^* + x_2^* = -5$
+
+$$N(c_1 c_2) = {objects + bins - 1 \choose bins - 1} = {-5 + 2 - 1 \choose 2 - 1} = 0$$
+
+<br>
+
+*Finally, plug in all of our obtained values:*
+
+$$S_3 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2) = 2 - (0 + 0) + 0 = 2$$
+
+**********************************************************************************************
+
+**Scenario 3 (solving for S when i = 4)**
+
+<br>
+
+**Step 1: Each flip yields a 1 at the minimum**
+
+$$x_1 + x_2 = 4$$
+
+$x_1^* + x_2^* = 2$, since $x_i \geq 1$
+
+<br>
+
+Now, using combinations with repetition:
+
+${objects + bins - 1 \choose bins - 1} = {2 + 2 - 1 \choose 2 - 1} = 3$ (our "A" value from above)
+
+<br>
+
+**Step 2: Each flip cannot be higher than 2**
+
+$x_1^* + x_2^* = 2$ and $x_i^* \leq 2$. Therefore, our condition is $c_i = x_i^* \geq 3$, so $\bar{c_i} = x_i^* \leq 2$
+
+$$S_4 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2)$$
+
+<br>
+
+*Solving for $N(c_1)$*
+
+$x_1 + x_2 = 2$ with $x_1 \geq 3$. Therefore, $x_1^* + x_2 = -1$
+
+$$N(c_1) = {objects + bins - 1 \choose bins - 1} = {-1 + 2 - 1 \choose 2 - 1} = 0$$
+
+Since $c_2$ is the same as $c_1$, $N(c_1) = N(c_2)$
+
+<br>
+
+*Solving for $N(c_1 c_2)$*
+
+$x_1 + x_2 = 2$ with $x_1 \geq 3$ and $x_2 \geq 3$. Therefore, $x_1^* + x_2^* = -4$
+
+$$N(c_1 c_2) = {objects + bins - 1 \choose bins - 1} = {-4 + 2 - 1 \choose 2 - 1} = 0$$
+
+<br>
+
+*Finally, plug in all of our obtained values:*
+
+$$S_4 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2) = 3 - (0 + 0) + 0 = 3$$
+
+**********************************************************************************************
+
+**Now that we have all of our values for S, we can put this back into the original equation:**
+
+$$P(2, 2) = \sum_{i=2}^{4} (\frac{S}{4})^2 = (\frac{1}{4})^2 + (\frac{2}{4})^2 + (\frac{3}{4})^2 = \frac{14}{16} = \frac{7}{8}$$
+
+______________________________________________________________________________________________
+______________________________________________________________________________________________
+______________________________________________________________________________________________
+
+<br>
+
+<br>
+
+______________________________________________________________________________________________
+______________________________________________________________________________________________
+______________________________________________________________________________________________
+
+**Example 2) 3 faces, 2 flips**
+
+$$P(3, 2) = \sum_{i=3}^{6} (\frac{S}{9})^2$$
+
+**********************************************************************************************
+
+**Scenario 1 (solving for S when i = 3)**
+
+<br>
+
+**Step 1: Each flip yields a 1 at the minimum**
+
+$$x_1 + x_2 = 3$$
+
+$x_1^* + x_2^* = 1$, since $x_i \geq 1$
+
+<br>
+
+Now, using combinations with repetition:
+
+${objects + bins - 1 \choose bins - 1} = {1 + 2 - 1 \choose 2 - 1} = 2$ (our "A" value from above)
+
+<br>
+
+**Step 2: Each flip cannot be higher than 3**
+
+$x_1^* + x_2^* = 1$ and $x_i^* \leq 3$. Therefore, our condition is $c_i = x_i^* \geq 4$, so $\bar{c_i} = x_i^* \leq 3$
+
+$$S_3 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2)$$
+
+<br>
+
+*Solving for $N(c_1)$*
+
+$x_1 + x_2 = 1$ with $x_1 \geq 3$. Therefore, $x_1^* + x_2 = -2$
+
+Using combinations with repetition again (this is the part I'm slightly doubtful of since it introduces combinations with negative numbers inside of them):
+
+$$N(c_1) = {objects + bins - 1 \choose bins - 1} = {-2 + 2 - 1 \choose 2 - 1} = 0$$
+
+Since $c_2$ is the same as $c_1$, $N(c_1) = N(c_2)$
+
+<br>
+
+*Solving for $N(c_1 c_2)$*
+
+$x_1 + x_2 = 1$ with $x_1 \geq 3$ and $x_2 \geq 3$. Therefore, $x_1^* + x_2^* = -5$
+
+$$N(c_1 c_2) = {objects + bins - 1 \choose bins - 1} = {-5 + 2 - 1 \choose 2 - 1} = 0$$
+
+<br>
+
+*Finally, plug in all of our obtained values:*
+
+$$S_3 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2) = 2 - (0 + 0) + 0 = 2$$
+
+**********************************************************************************************
+
+**Scenario 2 (solving for S when i = 4)**
+
+<br>
+
+**Step 1: Each flip yields a 1 at the minimum**
+
+$$x_1 + x_2 = 4$$
+
+$x_1^* + x_2^* = 2$, since $x_i \geq 1$
+
+<br>
+
+Now, using combinations with repetition:
+
+${objects + bins - 1 \choose bins - 1} = {2 + 2 - 1 \choose 2 - 1} = 3$ (our "A" value from above)
+
+<br>
+
+**Step 2: Each flip cannot be higher than 3**
+
+$x_1^* + x_2^* = 2$ and $x_i^* \leq 3$. Therefore, our condition is $c_i = x_i^* \geq 4$, so $\bar{c_i} = x_i^* \leq 3$
+
+$$S_4 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2)$$
+
+<br>
+
+*Solving for $N(c_1)$*
+
+$x_1 + x_2 = 2$ with $x_1 \geq 3$. Therefore, $x_1^* + x_2 = -1$
+
+$$N(c_1) = {objects + bins - 1 \choose bins - 1} = {-1 + 2 - 1 \choose 2 - 1} = 0$$
+
+Since $c_2$ is the same as $c_1$, $N(c_1) = N(c_2)$
+
+<br>
+
+*Solving for $N(c_1 c_2)$*
+
+$x_1 + x_2 = 2$ with $x_1 \geq 3$ and $x_2 \geq 3$. Therefore, $x_1^* + x_2^* = -4$
+
+$$N(c_1 c_2) = {objects + bins - 1 \choose bins - 1} = {-4 + 2 - 1 \choose 2 - 1} = 0$$
+
+<br>
+
+*Finally, plug in all of our obtained values:*
+
+$$S_4 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2) = 3 - (0 + 0) + 0 = 3$$
+
+**********************************************************************************************
+
+**Scenario 3 (solving for S when i = 5)**
+
+<br>
+
+**Step 1: Each flip yields a 1 at the minimum**
+
+$$x_1 + x_2 = 5$$
+
+$x_1^* + x_2^* = 3$, since $x_i \geq 1$
+
+<br>
+
+Now, using combinations with repetition:
+
+${objects + bins - 1 \choose bins - 1} = {3 + 2 - 1 \choose 2 - 1} = 4$ (our "A" value from above)
+
+<br>
+
+**Step 2: Each flip cannot be higher than 3**
+
+$x_1^* + x_2^* = 3$ and $x_i^* \leq 3$. Therefore, our condition is $c_i = x_i^* \geq 4$, so $\bar{c_i} = x_i^* \leq 3$
+
+$$S_5 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2)$$
+
+<br>
+
+*Solving for $N(c_1)$*
+
+$x_1 + x_2 = 3$ with $x_1 \geq 3$. Therefore, $x_1^* + x_2 = 0$
+
+$$N(c_1) = {objects + bins - 1 \choose bins - 1} = {0 + 2 - 1 \choose 2 - 1} = 1$$
+
+Since $c_2$ is the same as $c_1$, $N(c_1) = N(c_2)$
+
+<br>
+
+*Solving for $N(c_1 c_2)$*
+
+$x_1 + x_2 = 3$ with $x_1 \geq 3$ and $x_2 \geq 3$. Therefore, $x_1^* + x_2^* = -3$
+
+$$N(c_1 c_2) = {objects + bins - 1 \choose bins - 1} = {-3 + 2 - 1 \choose 2 - 1} = 0$$
+
+<br>
+
+*Finally, plug in all of our obtained values:*
+
+$$S_5 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2) = 4 - (1 + 1) + 0 = 2$$
+
+**********************************************************************************************
+
+**Scenario 4 (solving for S when i = 6)**
+
+<br>
+
+**Step 1: Each flip yields a 1 at the minimum**
+
+$$x_1 + x_2 = 6$$
+
+$x_1^* + x_2^* = 4$, since $x_i \geq 1$
+
+<br>
+
+Now, using combinations with repetition:
+
+${objects + bins - 1 \choose bins - 1} = {4 + 2 - 1 \choose 2 - 1} = 5$ (our "A" value from above)
+
+<br>
+
+**Step 2: Each flip cannot be higher than 3**
+
+$x_1^* + x_2^* = 4$ and $x_i^* \leq 3$. Therefore, our condition is $c_i = x_i^* \geq 4$, so $\bar{c_i} = x_i^* \leq 3$
+
+$$S_6 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2)$$
+
+<br>
+
+*Solving for $N(c_1)$*
+
+$x_1 + x_2 = 4$ with $x_1 \geq 3$. Therefore, $x_1^* + x_2 = 1$
+
+$$N(c_1) = {objects + bins - 1 \choose bins - 1} = {1 + 2 - 1 \choose 2 - 1} = 2$$
+
+Since $c_2$ is the same as $c_1$, $N(c_1) = N(c_2)$
+
+<br>
+
+*Solving for $N(c_1 c_2)$*
+
+$x_1 + x_2 = 4$ with $x_1 \geq 3$ and $x_2 \geq 3$. Therefore, $x_1^* + x_2^* = -2$
+
+$$N(c_1 c_2) = {objects + bins - 1 \choose bins - 1} = {-2 + 2 - 1 \choose 2 - 1} = 0$$
+
+<br>
+
+*Finally, plug in all of our obtained values:*
+
+$$S_6 = N(\bar{c_1}\bar{c_2}) = A - (N(c_1) + N(c_2)) + N(c_1 c_2) = 5 - (2 + 2) + 0 = 1$$
+
+**********************************************************************************************
+
+**Now that we have all of our values for S, we can put this back into the original equation:**
+
+$$P(3, 2) = \sum_{i=3}^{6} (\frac{S}{9})^2 = (\frac{2}{9})^2 + (\frac{3}{9})^2 + (\frac{2}{9})^2 + (\frac{1}{9})^2 = \frac{18}{81} = \frac{2}{9}$$
+
+______________________________________________________________________________________________
+______________________________________________________________________________________________
+______________________________________________________________________________________________
+
+
 
 <!-- P(S) = probability of the average of the faces (S) -->
 
